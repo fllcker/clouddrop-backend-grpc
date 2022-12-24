@@ -1,3 +1,20 @@
 ﻿syntax = "proto3";
 
 package users;
+
+service UsersService {
+    rpc GetUserById (UserByIdRequest) returns (UserProfileMessage);
+    rpc GetProfile (UsersEmptyMessage) returns (UserProfileMessage);
+}
+
+message UsersEmptyMessage {}
+
+message UserByIdRequest {
+    int32 id = 1;
+}
+
+message UserProfileMessage {
+    int32 id = 1;
+    string email = 2;
+    string name = 3;
+}

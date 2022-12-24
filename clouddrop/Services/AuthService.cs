@@ -30,6 +30,7 @@ public class AuthService : Auth.AuthService.AuthServiceBase
     {
         List<Claim> claims = new List<Claim>
         {
+            new Claim("Id", user.Id.ToString()),
             new Claim(ClaimTypes.Email, user.Email)
         };
         var key = new SymmetricSecurityKey(
