@@ -56,7 +56,12 @@ public class AuthService : clouddrop.AuthService.AuthServiceBase
         
         var user = _mapper.Map<User>(request);
         user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password); // hashing password
+        
+        // creating storage for user // TODO: Later create folder for user
+        user.Storage = new Storage() { User = user };
+
         _dbc.Users.Add(user);
+        _dbc.Storages.Add(user.Storage);
         await _dbc.SaveChangesAsync();
         
         // creating token

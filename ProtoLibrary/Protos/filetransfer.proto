@@ -1,0 +1,32 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "clouddrop";
+
+package filetransfer;
+
+service FileTransferService {
+    rpc StartReceivingFile (StartRequest) returns (Response);
+    rpc ReceiveFileChunk (stream Chunk) returns (Response);
+    rpc FinishReceivingFile (FinishRequest) returns (Response);
+}
+
+message StartRequest {
+    int32 op_id = 1;
+    string name = 2;
+    string type = 3;
+    int32 storage_id = 4;
+    int32 parent_id = 5;
+}
+
+message Chunk {
+    bytes data = 1;
+    int32 op_id = 2;
+}
+
+message FinishRequest {
+    int32 op_id = 1;
+}
+
+message Response {
+    string message = 1;
+}
