@@ -1,6 +1,4 @@
-﻿using Auth;
-
-namespace clouddrop.Services.Other;
+﻿namespace clouddrop.Services.Other;
 
 public interface IValidationService
 {

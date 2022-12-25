@@ -1,7 +1,5 @@
-﻿using Auth;
-using AutoMapper;
+﻿using AutoMapper;
 using clouddrop.Models;
-using Users;
 
 namespace clouddrop.Data;
 

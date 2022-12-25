@@ -1,5 +1,7 @@
 ﻿syntax = "proto3";
 
+option csharp_namespace = "clouddrop";
+
 package auth;
 
 service AuthService {

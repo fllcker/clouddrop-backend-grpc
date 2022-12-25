@@ -1,6 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Auth;
 using AutoMapper;
 using clouddrop.Data;
 using clouddrop.Models;
@@ -11,7 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace clouddrop.Services;
 
-public class AuthService : Auth.AuthService.AuthServiceBase
+public class AuthService : clouddrop.AuthService.AuthServiceBase
 {
     private readonly DBC _dbc;
     private readonly IValidationService _validationService;

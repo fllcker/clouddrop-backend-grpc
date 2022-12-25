@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace clouddrop.Models;
+﻿namespace clouddrop.Models;
 
 public class User
 {

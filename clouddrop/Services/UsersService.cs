@@ -4,12 +4,12 @@ using clouddrop.Data;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Users;
 
 namespace clouddrop.Services;
 
-public class UsersService : Users.UsersService.UsersServiceBase
+public class UsersService : clouddrop.UsersService.UsersServiceBase
 {
+    
     private readonly DBC _dbc;
     private readonly IMapper _mapper;
 
