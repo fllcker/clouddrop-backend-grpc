@@ -34,8 +34,17 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         
         if (storage.User.Email != accessEmail)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Storage access for you denied!"));
+
+        var parent = await _dbc.Contents
+            .Include(v => v.Storage)
+            .Where(v => v.Storage.Id == storage.Id)
+            .FirstOrDefaultAsync(v => v.Id == request.ParentId);
         
-        var parent = storage.Contents.FirstOrDefault(v => v.Id == request.ParentId);
+        //var parent = storage.Contents.FirstOrDefault(v => v.Id == request.ParentId);
+        // 4 test
+        if (parent == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "Parent not found!"));
+        
         if (parent?.Path == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Parent content PATH not found!"));
         
