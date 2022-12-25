@@ -1,4 +1,6 @@
-﻿namespace clouddrop.Models;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace clouddrop.Models;
 
 public class User
 {
@@ -6,4 +8,7 @@ public class User
     public string Email { get; set; }
     public string Password { get; set; }
     public string Name { get; set; }
+    
+    [ForeignKey("UserId")]
+    public Storage Storage { get; set; }
 }
