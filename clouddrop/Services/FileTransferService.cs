@@ -19,7 +19,6 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
     // grpc
     private Dictionary<int, FileStream> _streams;
     private Dictionary<int, string> _filePaths;
-    private Dictionary<int, Content> _contents;
 
     [Authorize]
     public override async Task<Response> StartReceivingFile(StartRequest request, ServerCallContext context)
@@ -61,10 +60,9 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
 
         if (!Directory.Exists(parent.Path)) Directory.CreateDirectory(parent.Path);
         
-        _contents[request.OpId] = newContent;
-        _filePaths[request.OpId] = Path.Combine("./UsersStorage", newContent.Path);
-        _streams[request.OpId] = new FileStream(_filePaths[request.OpId], FileMode.Create);
-        
+        _filePaths.Add(request.OpId, Path.Combine("./UsersStorage", newContent.Path));
+        _streams.Add(request.OpId, new FileStream(_filePaths[request.OpId], FileMode.Create));
+
         return await Task.FromResult(new Response() {Message = "Ok"});
     }
 
@@ -84,6 +82,6 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         await _streams[request.OpId].DisposeAsync();
         _streams[request.OpId] = null!;
         _filePaths[request.OpId] = null!;
-        return await Task.FromResult<Response>(new Response() {Message = $"Ok, ContentId = {_contents[request.OpId].Id}"});
+        return await Task.FromResult<Response>(new Response() {Message = "Ok"});
     }
 }
