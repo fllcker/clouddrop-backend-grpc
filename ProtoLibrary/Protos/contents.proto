@@ -1,0 +1,46 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "clouddrop";
+
+package contents;
+
+import "google/protobuf/wrappers.proto";
+
+service ContentsService {
+    rpc GetContentsFromStorage (GetContentsFromStorageRequest) returns (ContentsResponse);
+    rpc GetChildrenContents (GetChildrenContentsRequest) returns (ContentsResponse);
+}
+
+message GetContentsFromStorageRequest {
+    int32 storage_id = 1;
+}
+
+message GetChildrenContentsRequest {
+    int32 content_id = 2;
+}
+
+message ContentsResponse {
+    repeated ContentMessage children = 1;
+}
+
+message ContentMessage {
+    int32 id = 1;
+    ContentTypeEnum content_type = 2;
+    string path = 3;
+    string name = 4;
+    
+    StorageMessage storage = 5;
+    ContentMessage parent = 6;
+    repeated ContentMessage children = 7;
+}
+
+enum ContentTypeEnum {
+    CONTENT_TYPE_ENUM_FILE = 0;
+    CONTENT_TYPE_ENUM_FOLDER = 1;
+}
+
+message StorageMessage {
+    int32 id = 1;
+    int64 storage_used = 2;
+    google.protobuf.Int64Value storage_quote = 3;
+}

@@ -2,6 +2,8 @@
 
 option csharp_namespace = "clouddrop";
 
+import "google/protobuf/wrappers.proto";
+
 package filetransfer;
 
 service FileTransferService {
@@ -14,7 +16,7 @@ message StartRequest {
     string name = 1;
     string type = 2;
     int32 storage_id = 3;
-    int32 parent_id = 4;
+    google.protobuf.Int32Value parent_id = 4;
 }
 
 message Chunk {
