@@ -1,9 +1,11 @@
 ﻿using System.Security.Claims;
 using clouddrop.Data;
 using clouddrop.Models;
+using Google.Protobuf;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace clouddrop.Services;
@@ -102,5 +104,47 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         }
         
         return await Task.FromResult(new Response() {Message = "Ok"});
+    }
+
+
+    [Authorize]
+    public override async Task SendFileChunks(SendFileChunksRequest request, IServerStreamWriter<SendFileChunk> responseStream, ServerCallContext context)
+    {
+        var content = await _dbc.Contents
+            .Include(v => v.Storage)
+            .Include(v => v.Storage.User)
+            .SingleOrDefaultAsync(v => v.Id == request.ContentId);
+        if (content?.Storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "You dont have access to this storage"));
+        if (content.ContentType == ContentType.Folder)
+            throw new RpcException(new Status(StatusCode.Aborted, "You cannot download the folder"));
+        
+        var contentPath = Path.Combine(Directory.GetCurrentDirectory(), 
+            "UsersStorage", $"storage{content.Storage.Id}", content.Path ?? "unknown", content.Name ?? "unknown");
+        if (!File.Exists(contentPath))
+            throw new RpcException(new Status(StatusCode.NotFound, "File not found!"));
+
+        FileInfo fileInfo = new FileInfo(contentPath);
+        long fileSize = fileInfo.Length;
+        long chunkSize = 1024 * 1024; // 1 MB
+        int chunkCount = (int)Math.Ceiling(fileSize / (double)chunkSize);
+
+        byte[] buffer = new byte[chunkSize];
+        int bytesRead;
+
+        await using (FileStream stream = new FileStream(contentPath, FileMode.Open))
+        {
+            while ((bytesRead = stream.Read(buffer, 0, (int)chunkSize)) > 0)
+            {
+                var chunkBytes = buffer.Take(bytesRead).ToArray();
+                var chunk = new SendFileChunk()
+                {
+                    Data = ByteString.CopyFrom(chunkBytes),
+                    FileName = content.Name,
+                    TotalSize = fileSize
+                };
+                await responseStream.WriteAsync(chunk);
+            }
+        }
     }
 }
