@@ -3,6 +3,7 @@ using clouddrop.Data;
 using clouddrop.Models;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace clouddrop.Services;
@@ -63,16 +64,41 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
 
     public override async Task<Response> ReceiveFileChunk(IAsyncStreamReader<Chunk> chunkStream, ServerCallContext context)
     {
-        //Console.WriteLine("executed ReceiveFileChunk >>>");
+        long totalSize = 0;
+        int? contentId = null;
+        string? filePath = null;
         FileStream fs = null;
         while (await chunkStream.MoveNext())
         {
             var chunk = chunkStream.Current;
             if (fs == null) fs = new FileStream(chunk.FilePath, FileMode.OpenOrCreate);
-            await fs.WriteAsync(chunk.Data.ToArray());
-            
+            var bytes = chunk.Data.ToArray();
+            await fs.WriteAsync(bytes);
+            totalSize += bytes.Length;
+            contentId = chunk.ContentId;
+            filePath = chunk.FilePath;
         }
         if (fs != null) fs.Close();
+        
+        // check available place in user storage
+        var content = await _dbc.Contents
+            .Include(v => v.Storage)
+            .FirstOrDefaultAsync(v => v.Id == contentId);
+        if (content == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "Content Id is wrong!"));
+        var storage = content.Storage;
+        if ((storage.StorageUsed + totalSize) > storage.StorageQuote)
+        {
+            if (File.Exists(filePath)) File.Delete(filePath);
+            throw new RpcException(new Status(StatusCode.Aborted, "Not enough storage space!"));
+        }
+        else
+        {
+            var storage2 = await _dbc.Storages.FirstOrDefaultAsync(v => v.Id == storage.Id);
+            if (storage2 != null) storage2.StorageUsed += totalSize;
+            await _dbc.SaveChangesAsync();
+        }
+        
         return await Task.FromResult(new Response() {Message = "Ok"});
     }
 }

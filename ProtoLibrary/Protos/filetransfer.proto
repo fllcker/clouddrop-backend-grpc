@@ -21,6 +21,7 @@ message StartRequest {
 message Chunk {
     bytes data = 1;
     string file_path = 2;
+    int32 content_id = 3;
 }
 
 message Response {
