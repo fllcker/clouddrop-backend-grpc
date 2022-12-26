@@ -58,12 +58,14 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
 
     public override async Task<Response> ReceiveFileChunk(IAsyncStreamReader<Chunk> chunkStream, ServerCallContext context)
     {
+        //Console.WriteLine("executed ReceiveFileChunk >>>");
         FileStream fs = null;
         while (await chunkStream.MoveNext())
         {
             var chunk = chunkStream.Current;
             if (fs == null) fs = new FileStream(chunk.FilePath, FileMode.OpenOrCreate);
             await fs.WriteAsync(chunk.Data.ToArray());
+            
         }
         if (fs != null) fs.Close();
         return await Task.FromResult(new Response() {Message = "Ok"});

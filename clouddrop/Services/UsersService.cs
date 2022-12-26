@@ -21,7 +21,9 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
 
     public override async Task<UserProfileMessage> GetUserById(UserByIdRequest request, ServerCallContext context)
     {
-        var user = await _dbc.Users.SingleOrDefaultAsync(v => v.Id == request.Id);
+        var user = await _dbc.Users
+            .Include(v => v.Storage)
+            .SingleOrDefaultAsync(v => v.Id == request.Id);
         if (user == null)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));
         return await Task.FromResult(_mapper.Map<UserProfileMessage>(user));
@@ -31,7 +33,9 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
     public override async Task<UserProfileMessage> GetProfile(UsersEmptyMessage request, ServerCallContext context)
     {
         var email = context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!;
-        var user = await _dbc.Users.SingleOrDefaultAsync(v => v.Email == email);
+        var user = await _dbc.Users
+            .Include(v => v.Storage)
+            .SingleOrDefaultAsync(v => v.Email == email);
         if (user == null)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));
         return await Task.FromResult(_mapper.Map<UserProfileMessage>(user));

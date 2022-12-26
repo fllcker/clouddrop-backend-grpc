@@ -37,7 +37,15 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (storage?.User.Email != accessEmail)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "You dont have access to this storage!"));
 
-        var children = content.Children.Select(v => _mapper.Map<ContentMessage>(v));
+        var children = content.Children.Select(v => new ContentMessage()
+        {
+            ContentType = (int)v.ContentType == 0 ? ContentTypeEnum.File : ContentTypeEnum.Folder,
+            Id = v.Id,
+            Name = v.Name,
+            Parent = new ContentMessage() {Id = v.Parent.Id},
+            Path = v.Path,
+            Storage = new StorageMessage() {Id = v.Storage.Id}
+        });
         return await Task.FromResult(new ContentsResponse() {Children = { children }});
     }
 
@@ -53,7 +61,15 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (storage?.User.Email != accessEmail)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "You dont have access to this storage!"));
 
-        var contents = storage.Contents.Select(v => _mapper.Map<ContentMessage>(v));
+        var contents = storage.Contents.Select(v => new ContentMessage()
+        {
+            ContentType = (int)v.ContentType == 0 ? ContentTypeEnum.File : ContentTypeEnum.Folder,
+            Id = v.Id,
+            Name = v.Name,
+            Parent = new ContentMessage() {Id = v.Parent.Id},
+            Path = v.Path,
+            Storage = new StorageMessage() {Id = v.Storage.Id}
+        });
         return await Task.FromResult(new ContentsResponse() {Children = { contents }});
     }
 }

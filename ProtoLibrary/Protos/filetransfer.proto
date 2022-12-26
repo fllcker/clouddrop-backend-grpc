@@ -9,7 +9,6 @@ package filetransfer;
 service FileTransferService {
     rpc StartReceivingFile (StartRequest) returns (StartReceivingResponse);
     rpc ReceiveFileChunk (stream Chunk) returns (Response);
-    rpc FinishReceivingFile (FinishRequest) returns (Response);
 }
 
 message StartRequest {
@@ -22,10 +21,6 @@ message StartRequest {
 message Chunk {
     bytes data = 1;
     string file_path = 2;
-}
-
-message FinishRequest {
-    int32 op_id = 1;
 }
 
 message Response {
