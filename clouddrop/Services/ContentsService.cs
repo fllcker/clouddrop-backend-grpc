@@ -85,17 +85,17 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this storage!"));
         
-        // check if file or folder with this name and path already exists
-        if (await _dbc.Contents.Where(v => v.Path == request.Path).CountAsync(v => v.Name == request.Name) != 0)
-            throw new RpcException(new Status(StatusCode.AlreadyExists, "File or folder with this name and path already exists"));
-
         var parent = await _dbc.Contents.FirstOrDefaultAsync(v => v.Id == request.Parent.Id);
-        if (parent == null) throw new RpcException(new Status(StatusCode.NotFound, "Parent content not found!"));
+        var totalPath = parent != null ? Path.Combine(parent.Path!, request.Name) : Path.Combine("home", request.Name);
+        
+        // check if file or folder with this name and path already exists
+        if (await _dbc.Contents.Where(v => v.Path == totalPath).CountAsync(v => v.Name == request.Name) != 0)
+            throw new RpcException(new Status(StatusCode.AlreadyExists, "File or folder with this name and path already exists"));
         
         var newContent = new Content()
         {
             ContentType = request.ContentType == ContentTypeEnum.File ? ContentType.File : ContentType.Folder,
-            Path = Path.Combine(parent.Path!, request.Name),
+            Path = totalPath,
             Name = request.Name,
             Storage = new Storage() {Id = request.Storage.Id},
             Parent = request.Parent != null ? new Content() {Id = request.Parent.Id} : null
