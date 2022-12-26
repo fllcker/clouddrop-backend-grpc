@@ -31,11 +31,16 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         if (storage.User.Email != accessEmail)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Storage access for you denied!"));
 
-        var parent = await _dbc.Contents
+        var parents = _dbc.Contents
             .Include(v => v.Storage)
-            .Where(v => v.Storage.Id == storage.Id)
-            .FirstOrDefaultAsync(v => v.Id == request.ParentId);
-        
+            .Where(v => v.Storage.Id == storage.Id);
+        Content? parent = null!;
+
+        if (request.ParentId != null)
+            parent = await parents.FirstOrDefaultAsync(v => v.Id == request.ParentId);
+        else
+            parent = await parents.FirstOrDefaultAsync();
+
         Content newContent = new Content()
         {
             Storage = storage,
