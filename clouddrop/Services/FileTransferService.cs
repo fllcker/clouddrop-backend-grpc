@@ -56,7 +56,7 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         await _dbc.SaveChangesAsync();
         
         var savePath = Path.Combine(Directory.GetCurrentDirectory(), 
-            "UsersStorage", $"storage{storage.Id}", "home", parent?.Path ?? "");
+            "UsersStorage", $"storage{storage.Id}", parent?.Path ?? "home");
         
         if (!Directory.Exists(savePath)) Directory.CreateDirectory(savePath);
 

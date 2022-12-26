@@ -28,7 +28,7 @@ message ContentsResponse {
 message ContentMessage {
     int32 id = 1;
     ContentTypeEnum content_type = 2;
-    string path = 3;
+    google.protobuf.StringValue path = 3;
     string name = 4;
     
     StorageMessage storage = 5;
