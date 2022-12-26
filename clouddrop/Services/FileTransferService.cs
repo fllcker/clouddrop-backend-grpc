@@ -90,6 +90,8 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         if ((storage.StorageUsed + totalSize) > storage.StorageQuote)
         {
             if (File.Exists(filePath)) File.Delete(filePath);
+            _dbc.Contents.Remove(content);
+            await _dbc.SaveChangesAsync();
             throw new RpcException(new Status(StatusCode.Aborted, "Not enough storage space!"));
         }
         else

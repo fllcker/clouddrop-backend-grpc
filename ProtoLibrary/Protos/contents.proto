@@ -9,6 +9,8 @@ import "google/protobuf/wrappers.proto";
 service ContentsService {
     rpc GetContentsFromStorage (GetContentsFromStorageRequest) returns (ContentsResponse);
     rpc GetChildrenContents (GetChildrenContentsRequest) returns (ContentsResponse);
+    rpc NewContent (ContentMessage) returns (ContentMessage);
+    rpc RemoveContent (RemoveContentId) returns (ContentRemoveResult);
 }
 
 message GetContentsFromStorageRequest {
@@ -43,4 +45,13 @@ message StorageMessage {
     int32 id = 1;
     int64 storage_used = 2;
     google.protobuf.Int64Value storage_quote = 3;
+}
+
+
+message RemoveContentId {
+    int32 content_id = 1;
+}
+
+message ContentRemoveResult {
+    string message = 1;
 }

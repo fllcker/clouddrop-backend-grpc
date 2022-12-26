@@ -38,6 +38,17 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
             .SingleOrDefaultAsync(v => v.Email == email);
         if (user == null)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));
-        return await Task.FromResult(_mapper.Map<UserProfileMessage>(user));
+        return await Task.FromResult(new UserProfileMessage()
+        {
+            Id = user.Id,
+            Email = user.Email,
+            Name = user.Name,
+            Storage = new UserProfileStorageMessage()
+            {
+                Id = user.Storage.Id,
+                StorageQuote = user.Storage.StorageQuote,
+                StorageUsed = user.Storage.StorageUsed
+            }
+        });
     }
 }
