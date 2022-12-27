@@ -100,6 +100,7 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         {
             var storage2 = await _dbc.Storages.FirstOrDefaultAsync(v => v.Id == storage.Id);
             if (storage2 != null) storage2.StorageUsed += totalSize;
+            content.Size = totalSize;
             await _dbc.SaveChangesAsync();
         }
         

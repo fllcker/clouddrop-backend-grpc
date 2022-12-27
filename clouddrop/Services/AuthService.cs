@@ -59,12 +59,14 @@ public class AuthService : clouddrop.AuthService.AuthServiceBase
         
         // creating storage for user // TODO: Later create folder for user
         user.Storage = new Storage() { User = user };
-        var homeDir = new Content()
-            { ContentType = ContentType.Folder, Name = "home", Path = "home", Storage = user.Storage };
+        
+        _dbc.Contents.Add(new Content()
+            { ContentType = ContentType.Folder, Name = "home", Path = "home", Storage = user.Storage });
+        _dbc.Contents.Add(new Content()
+            { ContentType = ContentType.Folder, Name = "trashcan", Path = "trashcan", Storage = user.Storage });
 
         _dbc.Users.Add(user);
         _dbc.Storages.Add(user.Storage);
-        _dbc.Contents.Add(homeDir);
         await _dbc.SaveChangesAsync();
         
         // creating token

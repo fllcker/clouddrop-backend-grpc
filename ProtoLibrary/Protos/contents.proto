@@ -11,6 +11,8 @@ service ContentsService {
     rpc GetChildrenContents (GetChildrenContentsRequest) returns (ContentsResponse);
     rpc NewFolder (NewFolderMessage) returns (ContentMessage);
     rpc RemoveContent (RemoveContentId) returns (ContentRemoveResult);
+    
+    rpc GetSpecialContentId(GetSpecialContentIdRequest) returns (GetSpecialContentIdResponse);
 }
 
 message GetContentsFromStorageRequest {
@@ -60,4 +62,17 @@ message NewFolderMessage {
     string name = 1;
     google.protobuf.Int32Value storage_id = 2;
     google.protobuf.Int32Value parent_id = 3;
+}
+
+message GetSpecialContentIdRequest {
+    GetSpecialContentIdEnum special_content_enum = 1;
+}
+
+message GetSpecialContentIdResponse {
+    int32 content_id = 1;
+}
+
+enum GetSpecialContentIdEnum {
+    GET_SPECIAL_CONTENT_ID_ENUM_HOME = 0;
+    GET_SPECIAL_CONTENT_ID_ENUM_TRASHCAN = 1;
 }
