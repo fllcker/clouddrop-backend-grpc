@@ -38,7 +38,9 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (storage?.User.Email != accessEmail)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "You dont have access to this storage!"));
 
-        var children = content.Children.Select(v => new ContentMessage()
+        var children = content.Children
+            .Where(v => v.IsDeleted == false)
+            .Select(v => new ContentMessage()
         {
             ContentType = (int)v.ContentType == 0 ? ContentTypeEnum.File : ContentTypeEnum.Folder,
             Id = v.Id,
@@ -62,7 +64,9 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (storage?.User.Email != accessEmail)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "You dont have access to this storage!"));
 
-        var contents = storage.Contents.Select(v => new ContentMessage()
+        var contents = storage.Contents
+            .Where(v => v.IsDeleted == false)
+            .Select(v => new ContentMessage()
         {
             ContentType = (int)v.ContentType == 0 ? ContentTypeEnum.File : ContentTypeEnum.Folder,
             Id = v.Id,
@@ -145,24 +149,27 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             "UsersStorage", $"storage{storage.Id}", content.Path ?? "unknown");
         if (content.ContentType == ContentType.File)
         {
-            if (File.Exists(contentPath)) File.Delete(contentPath);
+            //if (File.Exists(contentPath)) File.Delete(contentPath);
         }
         else if (content.ContentType == ContentType.Folder)
         {
             var removedSize = await DeleteContentRecursion(content);
-            if (Directory.Exists(contentPath)) Directory.Delete(contentPath, recursive: true);
+            //if (Directory.Exists(contentPath)) Directory.Delete(contentPath, recursive: true);
             if (removedSize != null) storage.StorageUsed -= (long)removedSize;
         }
 
         if (content.Size != null) storage.StorageUsed -= (long)content.Size;
-        if (await _dbc.Contents.FindAsync(content.Id) != null) _dbc.Contents.Remove(content);
+        // soft delete
+        content.IsDeleted = true;
+        _dbc.Contents.Update(content);
         await _dbc.SaveChangesAsync();
+        
         return await Task.FromResult(new ContentRemoveResult() {Message = "Ok"});
     }
 
     private async Task<long?> DeleteContentRecursion(Content content, long? totalSize = null)
     {
-        if (totalSize == null) totalSize = 0;
+        totalSize ??= 0;
         var children = await _dbc.Contents
             .Include(v => v.Parent)
             .Where(v => v.Parent != null)
@@ -175,8 +182,12 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         }
 
         if (content.Size != null) totalSize += content.Size;
-        if (await _dbc.Contents.FindAsync(content.Id) != null) _dbc.Contents.Remove(content);
+        
+        // soft delete
+        content.IsDeleted = true;
+        _dbc.Contents.Update(content);
         await _dbc.SaveChangesAsync();
+        //if (await _dbc.Contents.FindAsync(content.Id) != null) _dbc.Contents.Remove(content);
         return totalSize;
     }
 
