@@ -45,6 +45,7 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             ContentType = (int)v.ContentType == 0 ? ContentTypeEnum.File : ContentTypeEnum.Folder,
             Id = v.Id,
             Name = v.Name,
+            Size = v.Size,
             Parent = new ContentMessage() {Id = v.Parent.Id},
             Path = v.Path,
             Storage = new StorageMessage() {Id = v.Storage.Id}
@@ -71,6 +72,7 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             ContentType = (int)v.ContentType == 0 ? ContentTypeEnum.File : ContentTypeEnum.Folder,
             Id = v.Id,
             Name = v.Name,
+            Size = v.Size,
             Parent = new ContentMessage() {Id = v.Parent.Id},
             Path = v.Path,
             Storage = new StorageMessage() {Id = v.Storage.Id}
@@ -210,5 +212,35 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (content != null)
             return await Task.FromResult(new GetSpecialContentIdResponse() {ContentId = content.Id});
         throw new RpcException(new Status(StatusCode.NotFound, "Not found!"));
+    }
+
+    [Authorize]
+    public override async Task<DeletedContentsMessage> GetDeletedContents(EmptyGetContentsMessage request, ServerCallContext context)
+    {
+        var storage = await _dbc.Storages
+            .Include(v => v.User)
+            .SingleOrDefaultAsync(v => v.User.Email == context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!);
+        if (storage == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "Storage not found!"));
+        var contents = await _dbc.Contents
+            .Include(v => v.Parent)
+            .Include(v => v.Children)
+            .Include(v => v.Storage)
+            .Where(v => v.Storage.Id == storage.Id)
+            .Where(v => v.IsDeleted == true)
+            .ToListAsync();
+        return await Task.FromResult(new DeletedContentsMessage()
+        {
+            ContentMessages = { contents.Select(v => new ContentMessage()
+            {
+                Id = v.Id,
+                ContentType = v.ContentType == ContentType.File ? ContentTypeEnum.File : ContentTypeEnum.Folder,
+                Path = v.Path,
+                Name = v.Name,
+                Size = v.Size,
+                Storage = new StorageMessage() {Id = v.Storage.Id},
+                Parent = v.Parent != null ? new ContentMessage() {Id = v.Parent.Id} : null,
+            }) }
+        });
     }
 }
