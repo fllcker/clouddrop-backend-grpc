@@ -75,17 +75,31 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
     }
     
     [Authorize]
-    public override async Task<ContentMessage> NewContent(ContentMessage request, ServerCallContext context)
+    public override async Task<ContentMessage> NewFolder(NewFolderMessage request, ServerCallContext context)
     {
-        var storageId = request.Storage.Id;
-        var storage = await _dbc.Storages
-            .Include(v => v.User)
-            .FirstOrDefaultAsync(v => v.Id == storageId);
+        Content? parent = null!;
+        Storage? storage = null!;
+        parent = await _dbc.Contents
+            .Include(v => v.Storage)
+            .Include(v => v.Storage.User)
+            .FirstOrDefaultAsync(v => v.Id == request.ParentId);
+        
+        if (parent == null)
+        {
+            storage = await _dbc.Storages
+                .Include(v => v.User)
+                .FirstOrDefaultAsync(v => v.Id == request.StorageId);
+        }
+        else
+        {
+            storage = parent.Storage;
+        }
+        
         if (storage == null) throw new RpcException(new Status(StatusCode.NotFound, "Storage not found!"));
         if (storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this storage!"));
         
-        var parent = await _dbc.Contents.FirstOrDefaultAsync(v => v.Id == request.Parent.Id);
+        
         var totalPath = parent != null ? Path.Combine(parent.Path!, request.Name) : Path.Combine("home", request.Name);
         
         // check if file or folder with this name and path already exists
@@ -94,15 +108,20 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         
         var newContent = new Content()
         {
-            ContentType = request.ContentType == ContentTypeEnum.File ? ContentType.File : ContentType.Folder,
+            ContentType = ContentType.Folder,
             Path = totalPath,
             Name = request.Name,
-            Storage = new Storage() {Id = request.Storage.Id},
-            Parent = request.Parent != null ? new Content() {Id = request.Parent.Id} : null
+            StorageId = storage.Id,
+            Parent = parent ?? null
         };
         _dbc.Contents.Add(newContent);
         await _dbc.SaveChangesAsync();
-        return await Task.FromResult(request);
+        return await Task.FromResult(new ContentMessage() // TODO
+        {
+            Id = newContent.Id,
+            Path = newContent.Path,
+            Name = newContent.Name
+        });
     }
 
     [Authorize]

@@ -9,7 +9,7 @@ import "google/protobuf/wrappers.proto";
 service ContentsService {
     rpc GetContentsFromStorage (GetContentsFromStorageRequest) returns (ContentsResponse);
     rpc GetChildrenContents (GetChildrenContentsRequest) returns (ContentsResponse);
-    rpc NewContent (ContentMessage) returns (ContentMessage);
+    rpc NewFolder (NewFolderMessage) returns (ContentMessage);
     rpc RemoveContent (RemoveContentId) returns (ContentRemoveResult);
 }
 
@@ -54,4 +54,10 @@ message RemoveContentId {
 
 message ContentRemoveResult {
     string message = 1;
+}
+
+message NewFolderMessage {
+    string name = 1;
+    google.protobuf.Int32Value storage_id = 2;
+    google.protobuf.Int32Value parent_id = 3;
 }
