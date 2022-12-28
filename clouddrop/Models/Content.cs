@@ -15,6 +15,7 @@ public class Content
     public string? Name { get; set; }
     public long? Size { get; set; }
     public bool? IsDeleted { get; set; } = false;
+    public long CreatedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     
     public virtual Content? Parent { get; set; }
     public int? ParentId { get; set; }

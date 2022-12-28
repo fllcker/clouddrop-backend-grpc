@@ -11,9 +11,11 @@ service ContentsService {
     rpc GetChildrenContents (GetChildrenContentsRequest) returns (ContentsResponse);
     rpc NewFolder (NewFolderMessage) returns (ContentMessage);
     rpc RemoveContent (RemoveContentId) returns (ContentRemoveResult);
+    rpc RecoveryContent (RecoveryContentId) returns (ContentsEmpty);
     
     rpc GetSpecialContentId (GetSpecialContentIdRequest) returns (GetSpecialContentIdResponse);
     rpc GetDeletedContents (EmptyGetContentsMessage) returns (DeletedContentsMessage);
+    rpc CleanTrashCan (ContentsEmpty) returns (ContentsEmpty);
 }
 
 message GetContentsFromStorageRequest {
@@ -21,7 +23,14 @@ message GetContentsFromStorageRequest {
 }
 
 message GetChildrenContentsRequest {
-    int32 content_id = 2;
+    int32 content_id = 1;
+    ContentSort content_sort = 2;
+}
+
+enum ContentSort {
+    CONTENT_SORT_NAME = 0;
+    CONTENT_SORT_CREATED_AT = 1;
+    CONTENT_SORT_SIZE = 2;
 }
 
 message ContentsResponse {
@@ -34,10 +43,11 @@ message ContentMessage {
     google.protobuf.StringValue path = 3;
     string name = 4;
     google.protobuf.Int64Value size = 5;
+    google.protobuf.Int64Value created_at = 6;
     
-    StorageMessage storage = 6;
-    ContentMessage parent = 7;
-    repeated ContentMessage children = 8;
+    StorageMessage storage = 7;
+    ContentMessage parent = 8;
+    repeated ContentMessage children = 9;
 }
 
 enum ContentTypeEnum {
@@ -54,10 +64,15 @@ message StorageMessage {
 
 message RemoveContentId {
     int32 content_id = 1;
+    google.protobuf.BoolValue full = 2;
 }
 
 message ContentRemoveResult {
     string message = 1;
+}
+
+message RecoveryContentId {
+    int32 content_id = 1;
 }
 
 message NewFolderMessage {
@@ -84,3 +99,5 @@ message EmptyGetContentsMessage {}
 message DeletedContentsMessage {
     repeated ContentMessage content_messages = 1;
 }
+
+message ContentsEmpty {}
