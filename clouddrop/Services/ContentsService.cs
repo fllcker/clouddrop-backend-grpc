@@ -165,19 +165,23 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (content.ContentType == ContentType.File)
         {
             if (request.Full == true && File.Exists(contentPath)) File.Delete(contentPath);
+            if (content.Size != null && request.Full == true) storage.StorageUsed -= (long)content.Size;
         }
         else if (content.ContentType == ContentType.Folder)
         {
             var removedSize = await DeleteContentRecursion(content, full: request.Full);
             if (request.Full == true && Directory.Exists(contentPath)) Directory.Delete(contentPath, recursive: true);
-            if (removedSize != null) storage.StorageUsed -= (long)removedSize;
+            if (removedSize != null && request.Full == true) storage.StorageUsed -= (long)removedSize;
         }
 
-        if (content.Size != null) storage.StorageUsed -= (long)content.Size;
         // soft delete
-        content.IsDeleted = true;
-        _dbc.Contents.Update(content);
-        if (request.Full == true && await _dbc.Contents.FindAsync(content.Id) != null) _dbc.Contents.Remove(content);
+        if (request.Full == true && await _dbc.Contents.FindAsync(content.Id) != null)
+            _dbc.Contents.Remove(content);
+        else
+        {
+            content.IsDeleted = true;
+            _dbc.Contents.Update(content);
+        }
         await _dbc.SaveChangesAsync();
 
         return await Task.FromResult(new ContentRemoveResult() { Message = "Ok" });
@@ -200,9 +204,13 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (content.Size != null) totalSize += content.Size;
 
         // soft delete
-        content.IsDeleted = true;
-        _dbc.Contents.Update(content);
-        if (full == true && await _dbc.Contents.FindAsync(content.Id) != null) _dbc.Contents.Remove(content);
+        if (full == true && await _dbc.Contents.FindAsync(content.Id) != null)
+            _dbc.Contents.Remove(content);
+        else
+        {
+            content.IsDeleted = true;
+            _dbc.Contents.Update(content);
+        }
         await _dbc.SaveChangesAsync();
         return totalSize;
     }
@@ -285,6 +293,8 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         var content = await _dbc.Contents
             .Include(v => v.Storage)
             .SingleOrDefaultAsync(v => v.Id == request.ContentId);
+        if (content?.IsDeleted == false)
+            throw new RpcException(new Status(StatusCode.Unknown, "Content is not deleted!"));
         var storage = await _dbc.Storages
             .Include(v => v.User)
             .SingleOrDefaultAsync(v => v.Id == content.Storage.Id);
