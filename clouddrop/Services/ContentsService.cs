@@ -177,7 +177,7 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         // soft delete
         if (request.Full == true && await _dbc.Contents.FindAsync(content.Id) != null)
             _dbc.Contents.Remove(content);
-        else
+        else if (await _dbc.Contents.FindAsync(content.Id) != null)
         {
             content.IsDeleted = true;
             _dbc.Contents.Update(content);
@@ -195,23 +195,20 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .Where(v => v.Parent != null)
             .Where(v => v.Parent!.Id == content.Id)
             .ToListAsync();
-
-        foreach (var child in children)
-        {
-            await DeleteContentRecursion(child);
-        }
-
-        if (content.Size != null) totalSize += content.Size;
+        
+        if (content.Size != null) totalSize += content.Size * 100; // TODO: for fun
 
         // soft delete
         if (full == true && await _dbc.Contents.FindAsync(content.Id) != null)
             _dbc.Contents.Remove(content);
-        else
+        else if (await _dbc.Contents.FindAsync(content.Id) != null)
         {
             content.IsDeleted = true;
             _dbc.Contents.Update(content);
         }
         await _dbc.SaveChangesAsync();
+        
+        foreach (var child in children) await DeleteContentRecursion(child, full: full);
         return totalSize;
     }
 
