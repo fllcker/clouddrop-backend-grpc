@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Text.RegularExpressions;
 using clouddrop.Data;
 using clouddrop.Models;
 using Google.Protobuf;
@@ -27,7 +28,7 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
             .FirstOrDefaultAsync(v => v.Id == request.StorageId);
         if (storage == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Storage not found!"));
-        
+
         var accessEmail = context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!;
         if (storage.User.Email != accessEmail)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Storage access for you denied!"));
@@ -42,6 +43,10 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         else
             parent = await parents.FirstOrDefaultAsync();
         
+        string pattern = @"[\\/:*?""<>|]";
+        Regex regex = new Regex(pattern);
+        if (regex.IsMatch(request.Name))
+            throw new RpcException(new Status(StatusCode.Aborted, "You use forbidden characters in the name"));
         
         string newContentName = $"{request.Name}.{request.Type}";
         string newContentPath = $"{parent?.Path ?? "home"}\\{request.Name}.{request.Type}";
@@ -60,6 +65,7 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         {
             Storage = storage,
             ContentType = ContentType.File,
+            ContentState = ContentState.Uploading,
             Name = newContentName,
             Path = newContentPath,
             Parent = parent
@@ -119,6 +125,25 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         return await Task.FromResult(new Response() {Message = "Ok"});
     }
 
+    [Authorize]
+    public override async Task<Response> FinishReceivingFile(FinishReceivingMessage request, ServerCallContext context)
+    {
+        var content = await _dbc.Contents
+            .Include(v => v.Storage)
+            .Include(v => v.Storage.User)
+            .SingleOrDefaultAsync(v => v.Id == request.ContentId);
+        if (content == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
+
+        if (content.Storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email))
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this content!"));
+
+        content.ContentState = ContentState.Ready;
+        _dbc.Contents.Update(content);
+        await _dbc.SaveChangesAsync();
+        return await Task.FromResult(new Response() {Message = "Ok"});
+    }
+
 
     [Authorize]
     public override async Task SendFileChunks(SendFileChunksRequest request, IServerStreamWriter<SendFileChunk> responseStream, ServerCallContext context)
@@ -131,6 +156,8 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
             throw new RpcException(new Status(StatusCode.PermissionDenied, "You dont have access to this storage"));
         if (content.ContentType == ContentType.Folder)
             throw new RpcException(new Status(StatusCode.Aborted, "You cannot download the folder"));
+        if (content.ContentState == ContentState.Ready || content.ContentState == ContentState.None)
+            throw new RpcException(new Status(StatusCode.Aborted, "It is forbidden to download files while their state is ready or none, change the state to downloading!"));
         
         var contentPath = Path.Combine(Directory.GetCurrentDirectory(), 
             "UsersStorage", $"storage{content.Storage.Id}", content.Path ?? "unknown");
@@ -160,5 +187,31 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
                 await responseStream.WriteAsync(chunk);
             }
         }
+    }
+
+    public override async Task<Response> SendFileStateChange(SendFileStateChangeRequest request, ServerCallContext context)
+    {
+        var content = await _dbc.Contents
+            .Include(v => v.Storage)
+            .Include(v => v.Storage.User)
+            .SingleOrDefaultAsync(v => v.Id == request.ContentId);
+        if (content == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
+
+        if (content.Storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email))
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this content!"));
+
+        if (request.State == SendFileStateChangeEnum.Start)
+        {
+            if (content.ContentState != ContentState.Ready)
+                throw new RpcException(new Status(StatusCode.Aborted, "The file is not ready for download!"));
+            content.ContentState = ContentState.Downloading;
+        }
+        else if (request.State == SendFileStateChangeEnum.Finish)
+            content.ContentState = ContentState.Ready;
+        
+        _dbc.Contents.Update(content);
+        await _dbc.SaveChangesAsync();
+        return await Task.FromResult(new Response() {Message = "Ok"});
     }
 }

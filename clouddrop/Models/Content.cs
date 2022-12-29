@@ -16,6 +16,7 @@ public class Content
     public long? Size { get; set; }
     public bool? IsDeleted { get; set; } = false;
     public long CreatedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    public ContentState ContentState { get; set; } = ContentState.None;
     
     public virtual Content? Parent { get; set; }
     public int? ParentId { get; set; }
@@ -26,4 +27,12 @@ public enum ContentType
 {
     File,
     Folder
+}
+
+public enum ContentState
+{
+    None = 0,
+    Ready,
+    Uploading,
+    Downloading
 }

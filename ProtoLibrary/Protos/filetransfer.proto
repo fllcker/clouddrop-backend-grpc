@@ -9,7 +9,9 @@ package filetransfer;
 service FileTransferService {
     rpc StartReceivingFile (StartRequest) returns (StartReceivingResponse);
     rpc ReceiveFileChunk (stream Chunk) returns (Response);
+    rpc FinishReceivingFile (FinishReceivingMessage) returns (Response);
     
+    rpc SendFileStateChange (SendFileStateChangeRequest) returns (Response);
     rpc SendFileChunks (SendFileChunksRequest) returns (stream SendFileChunk);
 }
 
@@ -35,7 +37,22 @@ message StartReceivingResponse {
     int32 content_id = 2;
 }
 
+message FinishReceivingMessage {
+    int32 content_id = 1;
+}
 
+
+
+message SendFileStateChangeRequest {
+    int32 content_id = 1;
+    SendFileStateChangeEnum state = 2;
+    
+}
+
+enum SendFileStateChangeEnum {
+    START = 0;
+    FINISH = 1;
+}
 
 message SendFileChunksRequest {
     int32 content_id = 1;

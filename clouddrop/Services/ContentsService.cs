@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Text.RegularExpressions;
 using AutoMapper;
 using clouddrop.Data;
 using clouddrop.Models;
@@ -85,6 +86,12 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this storage!"));
         
+        string pattern = @"[\\/:*?""<>|]";
+        Regex regex = new Regex(pattern);
+        if (regex.IsMatch(request.Name))
+            throw new RpcException(new Status(StatusCode.Aborted, "You use forbidden characters in the name"));
+
+        
         var totalPath = parent != null ? Path.Combine(parent.Path!, request.Name) : Path.Combine("home", request.Name);
 
         // check if file or folder with this name and path already exists
@@ -122,6 +129,8 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .FirstOrDefaultAsync(v => v.Id == request.ContentId);
         if (content == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
+        if (content.ContentState != ContentState.Ready)
+            throw new RpcException(new Status(StatusCode.Aborted, "You cannot delete a file until its state is ready!"));
 
         var storage = await GetUserStorage(storageId: content.Storage.Id);
         if (storage?.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
@@ -255,9 +264,10 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .SingleOrDefaultAsync(v => v.Id == contentId);
         if (content == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
-        
-        if (await _dbc.Contents.Where(v => v.Path == content.Path).CountAsync(v => v.Name == content.Name) > 1)
-            throw new RpcException(new Status(StatusCode.Cancelled, "The content you are trying to restore has the same name as other content in the same directory!"));
+
+        var countRepeats = await _dbc.Contents.Where(v => v.Path == content.Path).CountAsync(v => v.Name == content.Name);
+        if (countRepeats > 1)
+            throw new RpcException(new Status(StatusCode.Cancelled, $"The content you are trying to restore has the same name as other content in the same directory! ({countRepeats})"));
         
         content!.IsDeleted = false;
         _dbc.Contents.Update(content);
