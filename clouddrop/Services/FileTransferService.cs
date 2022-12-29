@@ -161,7 +161,7 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         
         var contentPath = Path.Combine(Directory.GetCurrentDirectory(), 
             "UsersStorage", $"storage{content.Storage.Id}", content.Path ?? "unknown");
-        Console.WriteLine($"FILEPATH: {contentPath}");
+
         if (!File.Exists(contentPath))
             throw new RpcException(new Status(StatusCode.NotFound, "File not found!"));
 

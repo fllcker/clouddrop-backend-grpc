@@ -11,4 +11,7 @@ public class User
     
     [ForeignKey("UserId")]
     public Storage Storage { get; set; }
+    
+    
+    public virtual Subscription Subscription { get; set; }
 }

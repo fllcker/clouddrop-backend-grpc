@@ -63,8 +63,17 @@ public class AuthService : clouddrop.AuthService.AuthServiceBase
         _dbc.Contents.Add(new Content()
             { ContentType = ContentType.Folder, Name = "home", Path = "home", Storage = user.Storage });
 
+        var basicSubscription = new Subscription()
+        {
+            Plan = await _dbc.Plans.FirstAsync(),
+            User = user,
+            FinishAt = DateTimeOffset.UtcNow.AddYears(2000).ToUnixTimeSeconds()
+        };
+        
         _dbc.Users.Add(user);
         _dbc.Storages.Add(user.Storage);
+        _dbc.Subscriptions.Add(basicSubscription);
+        user.Storage.StorageQuote = basicSubscription.Plan.AvailableQuote;
         await _dbc.SaveChangesAsync();
         
         // creating token

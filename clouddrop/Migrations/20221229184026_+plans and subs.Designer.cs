@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using clouddrop.Data;
 
 #nullable disable
 
-namespace CloudDropBackendgRPC.Migrations
+namespace clouddrop.Migrations
 {
     [DbContext(typeof(DBC))]
-    partial class DBCModelSnapshot : ModelSnapshot
+    [Migration("20221229184026_+plans and subs")]
+    partial class plansandsubs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -107,7 +110,7 @@ namespace CloudDropBackendgRPC.Migrations
                             Id = 1,
                             AvailableQuote = 52428800L,
                             AvailableSpeed = 0L,
-                            CreatedAt = 1672339979L,
+                            CreatedAt = 1672339226L,
                             Description = "Default free plan",
                             IsAvailable = true,
                             Name = "Basic",
@@ -118,7 +121,7 @@ namespace CloudDropBackendgRPC.Migrations
                             Id = 2,
                             AvailableQuote = 524288000L,
                             AvailableSpeed = 0L,
-                            CreatedAt = 1672339979L,
+                            CreatedAt = 1672339226L,
                             Description = "Middle premium plan",
                             IsAvailable = true,
                             Name = "Premium",
@@ -129,7 +132,7 @@ namespace CloudDropBackendgRPC.Migrations
                             Id = 3,
                             AvailableQuote = 10485760000L,
                             AvailableSpeed = 0L,
-                            CreatedAt = 1672339979L,
+                            CreatedAt = 1672339226L,
                             Description = "Plan for real funs",
                             IsAvailable = true,
                             Name = "Supporter",
@@ -183,8 +186,7 @@ namespace CloudDropBackendgRPC.Migrations
 
                     b.HasIndex("PlanId");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("Subscriptions");
                 });
@@ -244,8 +246,8 @@ namespace CloudDropBackendgRPC.Migrations
                         .IsRequired();
 
                     b.HasOne("clouddrop.Models.User", "User")
-                        .WithOne("Subscription")
-                        .HasForeignKey("clouddrop.Models.Subscription", "UserId")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -273,12 +275,6 @@ namespace CloudDropBackendgRPC.Migrations
             modelBuilder.Entity("clouddrop.Models.Storage", b =>
                 {
                     b.Navigation("User")
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("clouddrop.Models.User", b =>
-                {
-                    b.Navigation("Subscription")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

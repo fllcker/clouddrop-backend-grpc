@@ -37,6 +37,7 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
         var email = context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!;
         var user = await _dbc.Users
             .Include(v => v.Storage)
+            .Include(v => v.Subscription)
             .SingleOrDefaultAsync(v => v.Email == email);
         if (user == null)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));

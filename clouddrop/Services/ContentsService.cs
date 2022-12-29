@@ -105,6 +105,7 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         var newContent = new Content()
         {
             ContentType = ContentType.Folder,
+            ContentState = ContentState.Ready,
             Path = totalPath,
             Name = request.Name,
             StorageId = storage.Id,
@@ -129,6 +130,7 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .FirstOrDefaultAsync(v => v.Id == request.ContentId);
         if (content == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
+        
         if (content.ContentState != ContentState.Ready)
             throw new RpcException(new Status(StatusCode.Aborted, "You cannot delete a file until its state is ready!"));
 
@@ -138,29 +140,31 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
 
         string contentPath = Path.Combine(Directory.GetCurrentDirectory(),
             "UsersStorage", $"storage{storage.Id}", content.Path ?? "unknown");
-        if (content.ContentType == ContentType.File)
+        
+        if (content.ContentType == ContentType.File && request.Full == true)
         {
-            if (request.Full == true && File.Exists(contentPath)) File.Delete(contentPath);
-            if (content.Size != null && request.Full == true) storage.StorageUsed -= (long)content.Size;
+            if (File.Exists(contentPath)) File.Delete(contentPath);
+            if (content.Size != null) storage.StorageUsed -= (long)content.Size;
         }
         else if (content.ContentType == ContentType.Folder)
         {
             var removedSize = await DeleteContentRecursion(content, full: request.Full);
             if (request.Full == true && Directory.Exists(contentPath)) Directory.Delete(contentPath, recursive: true);
-            if (removedSize != null && request.Full == true) storage.StorageUsed -= (long)removedSize;
+            if (request.Full == true && removedSize != null) storage.StorageUsed -= (long)removedSize;
         }
 
         // soft delete
-        if (request.Full == true && await _dbc.Contents.FindAsync(content.Id) != null)
+        if (await _dbc.Contents.FindAsync(content.Id) != null)
         {
-            _dbc.Contents.Remove(content);
+            if (request.Full == true) 
+                _dbc.Contents.Remove(content);
+            else
+            {
+                content.IsDeleted = true;
+                _dbc.Contents.Update(content);
+            }
+            await _dbc.SaveChangesAsync();
         }
-        else if (await _dbc.Contents.FindAsync(content.Id) != null)
-        {
-            content.IsDeleted = true;
-            _dbc.Contents.Update(content);
-        }
-        await _dbc.SaveChangesAsync();
 
         return await Task.FromResult(new ContentRemoveResult() { Message = "Ok" });
     }
@@ -173,12 +177,13 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .Where(v => v.Parent != null)
             .Where(v => v.Parent!.Id == content.Id)
             .ToListAsync();
-
-        if (content.Size != null) totalSize += content.Size;
-
+        
         // soft delete
         if (full == true && await _dbc.Contents.FindAsync(content.Id) != null)
+        {
+            if (content.Size != null) totalSize += content.Size;
             _dbc.Contents.Remove(content);
+        }
         else if (await _dbc.Contents.FindAsync(content.Id) != null)
         {
             content.IsDeleted = true;
@@ -186,7 +191,8 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         }
         await _dbc.SaveChangesAsync();
         
-        foreach (var child in children) await DeleteContentRecursion(child, full: full);
+        foreach (var child in children) 
+            totalSize += await DeleteContentRecursion(child, totalSize, full: full);
         return totalSize;
     }
 
@@ -265,15 +271,18 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (content == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
 
-        var countRepeats = await _dbc.Contents.Where(v => v.Path == content.Path).CountAsync(v => v.Name == content.Name);
-        if (countRepeats > 1)
+        var countRepeats = await _dbc.Contents
+            .Where(v => v.IsDeleted == false)
+            .Where(v => v.Path == content.Path)
+            .CountAsync(v => v.Name == content.Name);
+        if (countRepeats != 0)
             throw new RpcException(new Status(StatusCode.Cancelled, $"The content you are trying to restore has the same name as other content in the same directory! ({countRepeats})"));
         
         content!.IsDeleted = false;
         _dbc.Contents.Update(content);
         await _dbc.SaveChangesAsync();
         
-        if (content.Parent != null && content.Parent.ContentType == ContentType.Folder)
+        if (content.Parent != null && content.Parent.IsDeleted == true && content.Parent.ContentType == ContentType.Folder)
             await RecoveryContentRecursion(content.Parent.Id);
     }
 }
