@@ -5,6 +5,7 @@ using clouddrop.Models;
 using Google.Protobuf;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
@@ -87,18 +88,33 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
         long totalSize = 0;
         int? contentId = null;
         string? filePath = null;
-        FileStream fs = null;
-        while (await chunkStream.MoveNext())
+        try
         {
-            var chunk = chunkStream.Current;
-            if (fs == null) fs = new FileStream(chunk.FilePath, FileMode.OpenOrCreate);
-            var bytes = chunk.Data.ToArray();
-            await fs.WriteAsync(bytes);
-            totalSize += bytes.Length;
-            contentId = chunk.ContentId;
-            filePath = chunk.FilePath;
+            FileStream fs = null;
+            while (await chunkStream.MoveNext())
+            {
+                var chunk = chunkStream.Current;
+                if (fs == null) fs = new FileStream(chunk.FilePath, FileMode.OpenOrCreate);
+                var bytes = chunk.Data.ToArray();
+                await fs.WriteAsync(bytes);
+                totalSize += bytes.Length;
+                contentId = chunk.ContentId;
+                filePath = chunk.FilePath;
+            }
+
+            if (fs != null) fs.Close();
         }
-        if (fs != null) fs.Close();
+        catch (IOException ex) when (ex.InnerException is ConnectionResetException)
+        {
+            var exContent = await _dbc.Contents.FirstOrDefaultAsync(v => v.Id == contentId);
+            if (exContent != null)
+            {
+                if (File.Exists(exContent.Path)) File.Delete(exContent.Path);
+                _dbc.Remove(exContent);
+                await _dbc.SaveChangesAsync();
+                throw new RpcException(new Status(StatusCode.Aborted, "Connection error! Upload file again"));
+            }
+        }
         
         // check available place in user storage
         var content = await _dbc.Contents
@@ -187,6 +203,9 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
                 await responseStream.WriteAsync(chunk);
             }
         }
+
+        content.ContentState = ContentState.Ready;
+        await _dbc.SaveChangesAsync();
     }
 
     public override async Task<Response> SendFileStateChange(SendFileStateChangeRequest request, ServerCallContext context)
