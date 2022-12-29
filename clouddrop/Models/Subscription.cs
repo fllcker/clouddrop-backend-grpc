@@ -13,4 +13,5 @@ public class Subscription
     
     public long StartedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     public long FinishAt { get; set; }
+    public bool IsActive { get; set; } = true;
 }

@@ -1,0 +1,17 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "clouddrop";
+
+package codes;
+
+service CodesService {
+    rpc Activate (ActiveCodeMessage) returns (MessageResult);
+}
+
+message ActiveCodeMessage {
+  int32 code = 1;
+}
+
+message MessageResult {
+  string message = 1;
+}

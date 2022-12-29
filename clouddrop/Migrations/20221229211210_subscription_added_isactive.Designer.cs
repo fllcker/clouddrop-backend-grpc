@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using clouddrop.Data;
 
 #nullable disable
 
-namespace CloudDropBackendgRPC.Migrations
+namespace clouddrop.Migrations
 {
     [DbContext(typeof(DBC))]
-    partial class DBCModelSnapshot : ModelSnapshot
+    [Migration("20221229211210_subscription_added_isactive")]
+    partial class subscriptionaddedisactive
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

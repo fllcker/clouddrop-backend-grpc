@@ -31,4 +31,5 @@ public class DBC : DbContext
     public DbSet<Content> Contents { get; set; } = default!;
     public DbSet<Plan> Plans { get; set; } = default!;
     public DbSet<Subscription> Subscriptions { get; set; } = default!;
+    public DbSet<PurchaseCode> PurchaseCodes { get; set; } = default!;
 }
