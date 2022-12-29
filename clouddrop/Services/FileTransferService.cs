@@ -18,19 +18,17 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
     {
         _dbc = dbc;
     }
-
-
+    
     [Authorize]
     public override async Task<StartReceivingResponse> StartReceivingFile(StartRequest request, ServerCallContext context)
     {
-        var accessEmail = context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!;
         var storage = await _dbc.Storages
             .Include(v => v.User)
             .FirstOrDefaultAsync(v => v.Id == request.StorageId);
-        
         if (storage == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Storage not found!"));
         
+        var accessEmail = context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!;
         if (storage.User.Email != accessEmail)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Storage access for you denied!"));
 
@@ -43,13 +41,27 @@ public class FileTransferService : clouddrop.FileTransferService.FileTransferSer
             parent = await parents.FirstOrDefaultAsync(v => v.Id == request.ParentId);
         else
             parent = await parents.FirstOrDefaultAsync();
+        
+        
+        string newContentName = $"{request.Name}.{request.Type}";
+        string newContentPath = $"{parent?.Path ?? "home"}\\{request.Name}.{request.Type}";
+
+        int attempts = 0;
+        while (await _dbc.Contents
+                   .Where(v => v.IsDeleted == false)
+                   .CountAsync(v => v.Path == newContentPath) != 0)
+        {
+            attempts++;
+            newContentPath = $"{parent?.Path ?? "home"}\\{request.Name} ({attempts}).{request.Type}";
+            newContentName = $"{request.Name} ({attempts}).{request.Type}";
+        }
 
         Content newContent = new Content()
         {
             Storage = storage,
             ContentType = ContentType.File,
-            Name = $"{request.Name}.{request.Type}",
-            Path = $"{parent?.Path ?? "home"}\\{request.Name}.{request.Type}",
+            Name = newContentName,
+            Path = newContentPath,
             Parent = parent
         };
         _dbc.Contents.Add(newContent);

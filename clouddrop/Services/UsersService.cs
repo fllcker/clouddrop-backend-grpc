@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using AutoMapper;
 using clouddrop.Data;
+using clouddrop.Models;
+using clouddrop.Services.Other;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +13,12 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
 {
     
     private readonly DBC _dbc;
-    private readonly IMapper _mapper;
+    private readonly IMapService _mapService;
 
-    public UsersService(DBC dbc, IMapper mapper)
+    public UsersService(DBC dbc, IMapService mapService)
     {
         _dbc = dbc;
-        _mapper = mapper;
+        _mapService = mapService;
     }
 
     public override async Task<UserProfileMessage> GetUserById(UserByIdRequest request, ServerCallContext context)
@@ -26,7 +28,7 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
             .SingleOrDefaultAsync(v => v.Id == request.Id);
         if (user == null)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));
-        return await Task.FromResult(_mapper.Map<UserProfileMessage>(user));
+        return await Task.FromResult(_mapService.Map<User, UserProfileMessage>(user));
     }
     
     [Authorize]
@@ -38,17 +40,6 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
             .SingleOrDefaultAsync(v => v.Email == email);
         if (user == null)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));
-        return await Task.FromResult(new UserProfileMessage()
-        {
-            Id = user.Id,
-            Email = user.Email,
-            Name = user.Name,
-            Storage = new UserProfileStorageMessage()
-            {
-                Id = user.Storage.Id,
-                StorageQuote = user.Storage.StorageQuote,
-                StorageUsed = user.Storage.StorageUsed
-            }
-        });
+        return await Task.FromResult(_mapService.Map<User, UserProfileMessage>(user));
     }
 }

@@ -2,6 +2,7 @@
 using AutoMapper;
 using clouddrop.Data;
 using clouddrop.Models;
+using clouddrop.Services.Other;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -11,20 +12,33 @@ namespace clouddrop.Services;
 public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
 {
     private readonly DBC _dbc;
-    private readonly IMapper _mapper;
+    private readonly IMapService _mapService;
 
-    public ContentsService(DBC dbc, IMapper mapper)
+    public ContentsService(DBC dbc, IMapService mapService)
     {
         _dbc = dbc;
-        _mapper = mapper;
+        _mapService = mapService;
     }
 
+    private async Task<Storage> GetUserStorage(string? accessEmail = null, int? storageId = null)
+    {
+        if (accessEmail == null && storageId == null) throw new Exception("accessEmail is null and storageId is null!");
+        
+        var storages = _dbc.Storages
+            .Include(v => v.User);
+
+        var storage = accessEmail != null
+            ? await storages.SingleOrDefaultAsync(v => v.User.Email == accessEmail)
+            : await storages.SingleOrDefaultAsync(v => v.Id == storageId);
+        if (storage == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "User storage not found!"));
+        return storage;
+    }
+    
     [Authorize]
     public override async Task<ContentsResponse> GetChildrenContents(GetChildrenContentsRequest request,
         ServerCallContext context)
     {
-        var accessEmail = context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!;
-
         var content = await _dbc.Contents
             .Include(v => v.Children)
             .Include(v => v.Parent)
@@ -33,24 +47,13 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (content == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Parent content not found!"));
 
-        var storage = await _dbc.Storages
-            .Include(v => v.User)
-            .FirstOrDefaultAsync(v => v.Id == content.Storage.Id);
-        if (storage?.User.Email != accessEmail)
+        var storage = await GetUserStorage(storageId: content.Storage.Id);
+        if (storage?.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "You dont have access to this storage!")); 
 
         var children = content.Children
             .Where(v => v.IsDeleted == false)
-            .Select(v => new ContentMessage()
-            {
-                ContentType = (int)v.ContentType == 0 ? ContentTypeEnum.File : ContentTypeEnum.Folder,
-                Id = v.Id,
-                Name = v.Name,
-                Size = v.Size,
-                Parent = new ContentMessage() { Id = v.Parent.Id },
-                Path = v.Path,
-                Storage = new StorageMessage() { Id = v.Storage.Id }
-            });
+            .Select(v => _mapService.Map<Content, ContentMessage>(v));
 
         ContentsResponse cr = null!;
         if (request.ContentSort == ContentSort.Name)
@@ -60,34 +63,6 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         else
             cr = new ContentsResponse() { Children = { children.OrderByDescending(v => v.CreatedAt) } };
         return await Task.FromResult(cr);
-    }
-
-    [Authorize]
-    public override async Task<ContentsResponse> GetContentsFromStorage(GetContentsFromStorageRequest request,
-        ServerCallContext context)
-    {
-        var accessEmail = context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!;
-
-        var storage = await _dbc.Storages
-            .Include(v => v.User)
-            .Include(v => v.Contents)
-            .FirstOrDefaultAsync(v => v.Id == request.StorageId);
-        if (storage?.User.Email != accessEmail)
-            throw new RpcException(new Status(StatusCode.PermissionDenied, "You dont have access to this storage!"));
-
-        var contents = storage.Contents
-            .Where(v => v.IsDeleted == false)
-            .Select(v => new ContentMessage()
-            {
-                ContentType = (int)v.ContentType == 0 ? ContentTypeEnum.File : ContentTypeEnum.Folder,
-                Id = v.Id,
-                Name = v.Name,
-                Size = v.Size,
-                Parent = new ContentMessage() { Id = v.Parent.Id },
-                Path = v.Path,
-                Storage = new StorageMessage() { Id = v.Storage.Id }
-            });
-        return await Task.FromResult(new ContentsResponse() { Children = { contents } });
     }
 
     [Authorize]
@@ -101,32 +76,24 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .FirstOrDefaultAsync(v => v.Id == request.ParentId);
 
         if (parent == null)
-        {
-            storage = await _dbc.Storages
-                .Include(v => v.User)
-                .FirstOrDefaultAsync(v => v.Id == request.StorageId);
-        }
+            storage = await GetUserStorage(storageId: request.StorageId);
         else
-        {
             storage = parent.Storage;
-        }
 
-        if (storage == null) throw new RpcException(new Status(StatusCode.NotFound, "Storage not found!"));
+        if (storage == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "Storage not found!"));
         if (storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this storage!"));
-
-
+        
         var totalPath = parent != null ? Path.Combine(parent.Path!, request.Name) : Path.Combine("home", request.Name);
 
         // check if file or folder with this name and path already exists
         if (await _dbc.Contents
                 .Where(v => v.IsDeleted == false)
-                .Where(v => v.Path == totalPath).CountAsync(v => v.Name == request.Name) != 0)
+                .Where(v => v.Path == totalPath)
+                .CountAsync(v => v.Name == request.Name) != 0)
             throw new RpcException(new Status(StatusCode.AlreadyExists,
                 "File or folder with this name and path already exists"));
-
-        if (request.Name == "home" || request.Name == "trashcan")
-            throw new RpcException(new Status(StatusCode.Cancelled, "You cannot create a folder with this name"));
 
         var newContent = new Content()
         {
@@ -138,6 +105,7 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         };
         _dbc.Contents.Add(newContent);
         await _dbc.SaveChangesAsync();
+        
         return await Task.FromResult(new ContentMessage() // TODO
         {
             Id = newContent.Id,
@@ -154,9 +122,8 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .FirstOrDefaultAsync(v => v.Id == request.ContentId);
         if (content == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
-        var storage = await _dbc.Storages
-            .Include(v => v.User)
-            .FirstOrDefaultAsync(v => v.Id == content.Storage.Id);
+
+        var storage = await GetUserStorage(storageId: content.Storage.Id);
         if (storage?.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this storage"));
 
@@ -176,7 +143,9 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
 
         // soft delete
         if (request.Full == true && await _dbc.Contents.FindAsync(content.Id) != null)
+        {
             _dbc.Contents.Remove(content);
+        }
         else if (await _dbc.Contents.FindAsync(content.Id) != null)
         {
             content.IsDeleted = true;
@@ -195,8 +164,8 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .Where(v => v.Parent != null)
             .Where(v => v.Parent!.Id == content.Id)
             .ToListAsync();
-        
-        if (content.Size != null) totalSize += content.Size * 100; // TODO: for fun
+
+        if (content.Size != null) totalSize += content.Size;
 
         // soft delete
         if (full == true && await _dbc.Contents.FindAsync(content.Id) != null)
@@ -216,11 +185,7 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
     public override async Task<GetSpecialContentIdResponse> GetSpecialContentId(GetSpecialContentIdRequest request,
         ServerCallContext context)
     {
-        var storage = await _dbc.Storages
-            .Include(v => v.User)
-            .SingleOrDefaultAsync(v => v.User.Email == context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!);
-        if (storage == null)
-            throw new RpcException(new Status(StatusCode.NotFound, "User storage not found!"));
+        var storage = await GetUserStorage(context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!);
 
         Content? content = null;
         var contents = _dbc.Contents
@@ -240,11 +205,8 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
     public override async Task<DeletedContentsMessage> GetDeletedContents(EmptyGetContentsMessage request,
         ServerCallContext context)
     {
-        var storage = await _dbc.Storages
-            .Include(v => v.User)
-            .SingleOrDefaultAsync(v => v.User.Email == context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!);
-        if (storage == null)
-            throw new RpcException(new Status(StatusCode.NotFound, "Storage not found!"));
+        var storage = await GetUserStorage(context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!);
+        
         var contents = await _dbc.Contents
             .Include(v => v.Parent)
             .Include(v => v.Children)
@@ -254,30 +216,15 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .ToListAsync();
         return await Task.FromResult(new DeletedContentsMessage()
         {
-            ContentMessages =
-            {
-                contents.Select(v => new ContentMessage()
-                {
-                    Id = v.Id,
-                    ContentType = v.ContentType == ContentType.File ? ContentTypeEnum.File : ContentTypeEnum.Folder,
-                    Path = v.Path,
-                    Name = v.Name,
-                    Size = v.Size,
-                    Storage = new StorageMessage() { Id = v.Storage.Id },
-                    Parent = v.Parent != null ? new ContentMessage() { Id = v.Parent.Id } : null,
-                })
-            }
+            ContentMessages = { contents.Select(v => _mapService.Map<Content, ContentMessage>(v)) }
         });
     }
 
     [Authorize]
     public override async Task<ContentsEmpty> CleanTrashCan(ContentsEmpty request, ServerCallContext context)
     {
-        var storage = await _dbc.Storages
-            .Include(v => v.User)
-            .SingleOrDefaultAsync(v => v.User.Email == context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!);
-        if (storage == null)
-            throw new RpcException(new Status(StatusCode.NotFound, "Storage not found!"));
+        var storage = await GetUserStorage(context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!);
+
         _dbc.Contents.RemoveRange(_dbc.Contents.Include(v => v.Storage)
             .Where(v => v.IsDeleted == true).Where(v => v.Storage.Id == storage.Id));
         await _dbc.SaveChangesAsync();
@@ -292,9 +239,8 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .SingleOrDefaultAsync(v => v.Id == request.ContentId);
         if (content?.IsDeleted == false)
             throw new RpcException(new Status(StatusCode.Unknown, "Content is not deleted!"));
-        var storage = await _dbc.Storages
-            .Include(v => v.User)
-            .SingleOrDefaultAsync(v => v.Id == content.Storage.Id);
+        
+        var storage = await GetUserStorage(storageId: content.Storage.Id);
         if (storage == null || storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this storage!"));
 
@@ -309,11 +255,14 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             .SingleOrDefaultAsync(v => v.Id == contentId);
         if (content == null)
             throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
+        
         if (await _dbc.Contents.Where(v => v.Path == content.Path).CountAsync(v => v.Name == content.Name) > 1)
             throw new RpcException(new Status(StatusCode.Cancelled, "The content you are trying to restore has the same name as other content in the same directory!"));
+        
         content!.IsDeleted = false;
         _dbc.Contents.Update(content);
         await _dbc.SaveChangesAsync();
+        
         if (content.Parent != null && content.Parent.ContentType == ContentType.Folder)
             await RecoveryContentRecursion(content.Parent.Id);
     }

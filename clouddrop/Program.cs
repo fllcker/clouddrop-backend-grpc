@@ -30,6 +30,7 @@ builder.Services.AddAuthentication(
     });
 
 builder.Services.AddTransient<IValidationService, ValidationService>();
+builder.Services.AddTransient<IMapService, MapService>();
 
 var app = builder.Build();
 
