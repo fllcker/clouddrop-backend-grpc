@@ -11,5 +11,6 @@ public class AppMappingProfile : Profile
         CreateMap<SignInRequest, User>();
         CreateMap<User, UserProfileMessage>();
         CreateMap<Content, ContentMessage>();
+        CreateMap<Plan, PlanMessage>();
     }
 }
