@@ -1,0 +1,26 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "clouddrop";
+
+package subscriptions;
+
+service SubscriptionsService {
+  rpc GetMySubscription (EmptyMessage) returns (SubscriptionMessage);
+}
+
+message EmptyMessage {}
+
+message SubscriptionMessage {
+  int32 id = 1;
+  int64 started_at = 2;
+  int64 finish_at = 3;
+  bool is_active = 4;
+  SubscriptionPlanMessage plan = 5;
+}
+
+message SubscriptionPlanMessage {
+  int32 id = 1;
+  string name = 2;
+  int64 available_quote = 3;
+  int64 available_speed = 4;
+}

@@ -12,5 +12,7 @@ public class AppMappingProfile : Profile
         CreateMap<User, UserProfileMessage>();
         CreateMap<Content, ContentMessage>();
         CreateMap<Plan, PlanMessage>();
+        CreateMap<Plan, SubscriptionPlanMessage>();
+        CreateMap<Subscription, SubscriptionMessage>();
     }
 }

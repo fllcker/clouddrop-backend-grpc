@@ -44,6 +44,7 @@ app.MapGrpcService<FileTransferService>();
 app.MapGrpcService<ContentsService>();
 app.MapGrpcService<CodesService>();
 app.MapGrpcService<PlansService>();
+app.MapGrpcService<SubscriptionsService>();
 
 app.MapGet("/",
     () =>
