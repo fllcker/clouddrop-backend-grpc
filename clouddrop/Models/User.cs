@@ -2,6 +2,7 @@
 
 namespace clouddrop.Models;
 
+[Table("Users")] 
 public class User
 {
     public int Id { get; set; }

@@ -9,6 +9,9 @@ import "google/protobuf/wrappers.proto";
 service UsersService {
     rpc GetUserById (UserByIdRequest) returns (UserProfileMessage);
     rpc GetProfile (UsersEmptyMessage) returns (UserProfileMessage);
+    
+    rpc GetUserInfo (UsersEmptyMessage) returns (UserInfoMessage);
+    rpc UpdateUserInfo (UserInfoMessage) returns (UsersEmptyMessage);
 }
 
 message UsersEmptyMessage {}
@@ -24,9 +27,15 @@ message UserProfileMessage {
     UserProfileStorageMessage storage = 4;
 }
 
-
 message UserProfileStorageMessage {
     int32 id = 1;
     int64 storage_used = 2;
     google.protobuf.Int64Value storage_quote = 3;
+}
+
+message UserInfoMessage {
+    google.protobuf.StringValue first_name = 1;
+    google.protobuf.StringValue last_name = 2;
+    google.protobuf.StringValue country = 3;
+    google.protobuf.StringValue city = 4;
 }
