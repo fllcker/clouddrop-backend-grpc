@@ -307,12 +307,17 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
 
         // moving file in file system
         var oldRealPath = Path.Combine(Directory.GetCurrentDirectory(), 
-            "UsersStorage", $"storage{content.Storage.Id}", oldPath);
-        if (!File.Exists(oldRealPath))
-            throw new RpcException(new Status(StatusCode.Aborted, "File is lost!"));
+            "UsersStorage", $"storage{content.Storage.Id}", oldPath, content.Name!);
         var newRealPath = Path.Combine(Directory.GetCurrentDirectory(), 
             "UsersStorage", $"storage{content.Storage.Id}", newPath);
-        File.Move(oldRealPath, newRealPath);
+
+        if (content.ContentType == ContentType.File)
+        {
+            if (!File.Exists(oldRealPath))
+                throw new RpcException(new Status(StatusCode.Aborted, "File is lost!"));
+            File.Move(oldRealPath, newRealPath);
+        }
+        else throw new RpcException(new Status(StatusCode.Aborted, "You cannot change folder name now!"));
         
         content.Path = newPath;
         content.Name = request.NewName;
