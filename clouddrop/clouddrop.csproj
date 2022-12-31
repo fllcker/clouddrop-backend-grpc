@@ -25,7 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\ProtoLibrary\ProtoLibrary.csproj" />
+      <ProjectReference Include="..\clouddrop.Protos\clouddrop.Protos.csproj" />
     </ItemGroup>
 
 </Project>

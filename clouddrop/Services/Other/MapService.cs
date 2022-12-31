@@ -26,7 +26,8 @@ public class MapService : IMapService
             Size = source.Size,
             Parent = source.Parent != null ? new ContentMessage() { Id = source.Parent.Id } : null,
             Path = source.Path,
-            Storage = source.Storage != null ? new StorageMessage() { Id = source.Storage.Id } : null
+            Storage = source.Storage != null ? new StorageMessage() { Id = source.Storage.Id } : null,
+            CreatedAt = source.CreatedAt
         };
 
     private UserProfileMessage UserToUserProfileMessage(User user)

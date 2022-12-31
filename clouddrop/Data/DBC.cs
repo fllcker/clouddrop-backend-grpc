@@ -22,7 +22,7 @@ public class DBC : DbContext
             {
                 new() {Id = 1, Name = "Basic", Description = "Default free plan", AvailableQuote = 52428800},
                 new() {Id = 2, Name = "Premium", Description = "Middle premium plan", AvailableQuote = 524288000},
-                new() {Id = 3, Name = "Supporter", Description = "Plan for real funs", AvailableQuote = 10485760000},
+                new() {Id = 3, Name = "Supporter", Description = "Plan for real funs", AvailableQuote = 10737418240},
             });
     }
 
