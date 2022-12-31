@@ -13,6 +13,7 @@ service ContentsService {
     rpc RemoveContent (RemoveContentId) returns (ContentRemoveResult);
     rpc RecoveryContent (RecoveryContentId) returns (ContentsEmpty);
     
+    rpc RenameContent (RenameContentRequest) returns (ResultMessage);
     rpc GetSpecialContentId (GetSpecialContentIdRequest) returns (GetSpecialContentIdResponse);
     rpc GetDeletedContents (EmptyGetContentsMessage) returns (DeletedContentsMessage);
     rpc CleanTrashCan (ContentsEmpty) returns (ContentsEmpty);
@@ -101,3 +102,13 @@ message DeletedContentsMessage {
 }
 
 message ContentsEmpty {}
+
+
+message RenameContentRequest {
+    int32 content_id = 1;
+    string new_name = 2;
+}
+
+message ResultMessage {
+    string result = 1;
+}

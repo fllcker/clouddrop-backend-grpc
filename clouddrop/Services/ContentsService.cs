@@ -285,4 +285,39 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
         if (content.Parent != null && content.Parent.IsDeleted == true && content.Parent.ContentType == ContentType.Folder)
             await RecoveryContentRecursion(content.Parent.Id);
     }
+
+    [Authorize]
+    public override async Task<ResultMessage> RenameContent(RenameContentRequest request, ServerCallContext context)
+    {
+        var content = await _dbc.Contents
+            .Include(v => v.Storage.User)
+            .SingleOrDefaultAsync(v => v.Id == request.ContentId);
+        if (content == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "Content not found!"));
+        
+        if (content.Storage.User.Email != context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!)
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "No access to this content!"));
+
+        var oldPathArray = content.Path.Split("\\").SkipLast(1);
+        var oldPath = String.Join('\\', oldPathArray);
+        var newPath = Path.Combine(oldPath, request.NewName);
+
+        if (await _dbc.Contents.CountAsync(v => v.Path == newPath) != 0)
+            throw new RpcException(new Status(StatusCode.Unknown, "There is already a file/folder with the same name in this directory!"));
+
+        // moving file in file system
+        var oldRealPath = Path.Combine(Directory.GetCurrentDirectory(), 
+            "UsersStorage", $"storage{content.Storage.Id}", oldPath);
+        if (!File.Exists(oldRealPath))
+            throw new RpcException(new Status(StatusCode.Aborted, "File is lost!"));
+        var newRealPath = Path.Combine(Directory.GetCurrentDirectory(), 
+            "UsersStorage", $"storage{content.Storage.Id}", newPath);
+        File.Move(oldRealPath, newRealPath);
+        
+        content.Path = newPath;
+        content.Name = request.NewName;
+        await _dbc.SaveChangesAsync();
+
+        return await Task.FromResult(new ResultMessage() { Result = "Ok" });
+    }
 }
