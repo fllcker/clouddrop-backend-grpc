@@ -41,6 +41,10 @@ public class MapService : IMapService
                 Id = user.Storage.Id,
                 StorageQuote = user.Storage.StorageQuote,
                 StorageUsed = user.Storage.StorageUsed
-            }
+            },
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Country = user.Country,
+            City = user.City
         };
 }

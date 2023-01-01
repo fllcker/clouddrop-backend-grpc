@@ -23,7 +23,6 @@ public class PlansService : clouddrop.PlansService.PlansServiceBase
     public override async Task<PlansMessage> GetAll(GetAllRequest request, ServerCallContext context)
     {
         int take = request.Max ?? 3;
-
         if (!_cache.TryGetValue(CacheKeys.Plans, out List<PlanMessage>? cachePlans))
         {
             cachePlans = await _dbc.Plans
@@ -33,7 +32,7 @@ public class PlansService : clouddrop.PlansService.PlansServiceBase
 
             _cache.Set(CacheKeys.Plans, cachePlans);
         }
-        
+
         return await Task.FromResult(new PlansMessage() { Plans = { cachePlans!.Take(take) } });
     }
 }

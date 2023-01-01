@@ -12,8 +12,8 @@ using clouddrop.Data;
 namespace clouddrop.Migrations
 {
     [DbContext(typeof(DBC))]
-    [Migration("20221231192449_added_userinfo")]
-    partial class addeduserinfo
+    [Migration("20230101122312_userinfo_in_user")]
+    partial class userinfoinuser
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -110,7 +110,7 @@ namespace clouddrop.Migrations
                             Id = 1,
                             AvailableQuote = 52428800L,
                             AvailableSpeed = 0L,
-                            CreatedAt = 1672514689L,
+                            CreatedAt = 1672575792L,
                             Description = "Default free plan",
                             IsAvailable = true,
                             Name = "Basic",
@@ -121,7 +121,7 @@ namespace clouddrop.Migrations
                             Id = 2,
                             AvailableQuote = 524288000L,
                             AvailableSpeed = 0L,
-                            CreatedAt = 1672514689L,
+                            CreatedAt = 1672575792L,
                             Description = "Middle premium plan",
                             IsAvailable = true,
                             Name = "Premium",
@@ -132,7 +132,7 @@ namespace clouddrop.Migrations
                             Id = 3,
                             AvailableQuote = 10737418240L,
                             AvailableSpeed = 0L,
-                            CreatedAt = 1672514689L,
+                            CreatedAt = 1672575792L,
                             Description = "Plan for real funs",
                             IsAvailable = true,
                             Name = "Supporter",
@@ -228,8 +228,20 @@ namespace clouddrop.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("City")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Country")
+                        .HasColumnType("text");
+
                     b.Property<string>("Email")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirstName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
                         .HasColumnType("text");
 
                     b.Property<string>("Name")

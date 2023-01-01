@@ -2,7 +2,6 @@
 
 namespace clouddrop.Models;
 
-[Table("Users")] 
 public class User
 {
     public int Id { get; set; }
@@ -10,9 +9,13 @@ public class User
     public string Password { get; set; }
     public string Name { get; set; }
     
+    // user-info
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? Country { get; set; }
+    public string? City { get; set; }
+
     [ForeignKey("UserId")]
     public Storage Storage { get; set; }
-    
-    
     public virtual Subscription Subscription { get; set; }
 }

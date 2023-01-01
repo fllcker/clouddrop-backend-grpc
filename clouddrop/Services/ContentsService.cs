@@ -306,7 +306,7 @@ public class ContentsService : clouddrop.ContentsService.ContentsServiceBase
             throw new RpcException(new Status(StatusCode.Unknown, "There is already a file/folder with the same name in this directory!"));
 
         // moving file in file system
-        var oldRealPath = Path.Combine(Directory.GetCurrentDirectory(), 
+        var oldRealPath = Path.Combine(Directory.GetCurrentDirectory(),
             "UsersStorage", $"storage{content.Storage.Id}", oldPath, content.Name!);
         var newRealPath = Path.Combine(Directory.GetCurrentDirectory(), 
             "UsersStorage", $"storage{content.Storage.Id}", newPath);
