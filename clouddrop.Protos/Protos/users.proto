@@ -10,7 +10,7 @@ service UsersService {
     rpc GetUserById (UserByIdRequest) returns (UserProfileMessage);
     rpc GetProfile (UsersEmptyMessage) returns (UserProfileMessage);
     
-    rpc UpdateProfileInfo (UserInfoMessage) returns (UserProfileMessage);
+    rpc UpdateProfileInfo (UserInfoMessage) returns (UsersEmptyMessage);
 }
 
 message UsersEmptyMessage {}
@@ -23,12 +23,13 @@ message UserProfileMessage {
     int32 id = 1;
     string email = 2;
     string name = 3;
-    UserProfileStorageMessage storage = 4;
+
+    string first_name = 4;
+    string last_name = 5;
+    string country = 6;
+    string city = 7;
     
-    string first_name = 5;
-    string last_name = 6;
-    string country = 7;
-    string city = 8;
+    UserProfileStorageMessage storage = 8;
 }
 
 
@@ -39,8 +40,8 @@ message UserProfileStorageMessage {
 }
 
 message UserInfoMessage {
-    google.protobuf.StringValue first_name = 1;
-    google.protobuf.StringValue last_name = 2;
-    google.protobuf.StringValue country = 3;
-    google.protobuf.StringValue city = 4;
+    string first_name = 1;
+    string last_name = 2;
+    string country = 3;
+    string city = 4;
 }

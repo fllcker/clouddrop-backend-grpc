@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddGrpc();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddDbContext<DBC>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));

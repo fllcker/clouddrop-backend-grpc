@@ -45,7 +45,7 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
     }
 
     [Authorize]
-    public override async Task<UserProfileMessage> UpdateProfileInfo(UserInfoMessage request, ServerCallContext context)
+    public override async Task<UsersEmptyMessage> UpdateProfileInfo(UserInfoMessage request, ServerCallContext context)
     {
         var email = context.GetHttpContext().User.FindFirstValue(ClaimTypes.Email)!;
         var user = await _dbc.Users
@@ -53,11 +53,12 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
         if (user == null)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));
 
-        user.FirstName = request.FirstName ?? user.FirstName;
-        user.LastName = request.LastName ?? user.LastName;
-        user.Country = request.Country ?? user.Country;
-        user.City = request.City ?? user.City;
+        if (!String.IsNullOrEmpty(request.FirstName)) user.FirstName = request.FirstName;
+        if (!String.IsNullOrEmpty(request.LastName)) user.LastName = request.LastName;
+        if (!String.IsNullOrEmpty(request.Country)) user.Country = request.Country;
+        if (!String.IsNullOrEmpty(request.City)) user.City = request.City;
+
         await _dbc.SaveChangesAsync();
-        return await Task.FromResult(_mapService.Map<User, UserProfileMessage>(user));
+        return await Task.FromResult(new UsersEmptyMessage());
     }
 }
