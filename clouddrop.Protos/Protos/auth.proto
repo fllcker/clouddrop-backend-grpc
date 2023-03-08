@@ -7,6 +7,7 @@ package auth;
 service AuthService {
     rpc SignUp (SignUpRequest) returns (TokenResponse);
     rpc SignIn (SignInRequest) returns (TokenResponse);
+    rpc Ping (PingMessage) returns (PingMessage);
 }
 
 // signup
@@ -24,4 +25,7 @@ message SignInRequest {
 
 message TokenResponse {
     string token = 1;
+}
+message PingMessage {
+
 }

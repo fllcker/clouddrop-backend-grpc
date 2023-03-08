@@ -53,6 +53,7 @@ public class UsersService : clouddrop.UsersService.UsersServiceBase
         if (user == null)
             throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));
 
+        if (!String.IsNullOrEmpty(request.Name)) user.Name = request.Name;
         if (!String.IsNullOrEmpty(request.FirstName)) user.FirstName = request.FirstName;
         if (!String.IsNullOrEmpty(request.LastName)) user.LastName = request.LastName;
         if (!String.IsNullOrEmpty(request.Country)) user.Country = request.Country;

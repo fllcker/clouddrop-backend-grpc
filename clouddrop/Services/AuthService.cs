@@ -92,4 +92,8 @@ public class AuthService : clouddrop.AuthService.AuthServiceBase
         var token = CreateToken(candidate);
         return await Task.FromResult(new TokenResponse() { Token = token });
     }
+
+    public override async Task<PingMessage> Ping(PingMessage request, ServerCallContext context) {
+        return await Task.FromResult(new PingMessage());
+    }
 }
